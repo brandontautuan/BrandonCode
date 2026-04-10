@@ -9,7 +9,10 @@ import {
   cmdModelRemove,
   cmdModelSwitch,
 } from "./commands/model.js";
+import { loadContext } from "./context/contextLoader.js";
+import { runContextFinishFlow } from "./context/contextUpdater.js";
 import { showBanner } from "./ui/banner.js";
+import { runAgentLoop } from "./agent/loop.js";
 
 const program = new Command();
 
@@ -23,6 +26,7 @@ program
     if (opts.banner !== false) {
       await showBanner();
     }
+    loadContext();
     getStore();
     ensureValidActiveModel();
   });
@@ -97,4 +101,65 @@ program
     console.log(`Default built-in id: ${DEFAULT_ACTIVE_MODEL_ID}`);
   });
 
-program.parse();
+const ctxRoot = program
+  .command("context")
+  .description("Persistent agent context (Phase 7)")
+  .action(() => {
+    ctxRoot.help();
+  });
+
+program
+  .command("agent")
+  .description("Interactive Ollama agent REPL (default when no subcommand)")
+  .option("--no-context-finish", "skip context update proposal on exit")
+  .action(async (opts: { noContextFinish?: boolean }) => {
+    await runAgentLoop({ skipContextFinish: Boolean(opts.noContextFinish) });
+  });
+
+ctxRoot
+  .command("finish")
+  .description("Propose updating context/agent.md and append a session log")
+  .argument("[note]", "Short note for **Last updated**")
+  .option("--built <text>", "Session log: what was built")
+  .option("--changed <text>", "Session log: what changed")
+  .option("--next <text>", "Session log: what's next")
+  .action(
+    async (
+      note: string | undefined,
+      opts: { built?: string; changed?: string; next?: string }
+    ) => {
+      const sessionNote = note?.trim() || "Session end";
+      await runContextFinishFlow({
+        sessionNote,
+        bullets: {
+          whatWasBuilt: opts.built ?? `- ${sessionNote}`,
+          whatChanged: opts.changed ?? "- Ran `brandon-code context finish`",
+          whatsNext: opts.next ?? "- Harden agent + tool UX",
+        },
+      });
+    }
+  );
+
+function injectDefaultAgentWhenNoSubcommand(): void {
+  const rest = process.argv.slice(2);
+  const wantsHelp =
+    rest.includes("-h") ||
+    rest.includes("--help") ||
+    rest.includes("-V") ||
+    rest.includes("--version");
+  if (wantsHelp) return;
+  const positional = rest.filter((t) => !t.startsWith("-"));
+  if (positional.length === 0) {
+    process.argv.push("agent");
+  }
+}
+
+async function main(): Promise<void> {
+  injectDefaultAgentWhenNoSubcommand();
+  await program.parseAsync(process.argv);
+}
+
+main().catch((err: unknown) => {
+  console.error(err);
+  process.exitCode = 1;
+});

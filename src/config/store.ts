@@ -38,7 +38,17 @@ function readFileConfig(): ConfigSchema | null {
     const hiddenBuiltinIds = Array.isArray(o.hiddenBuiltinIds)
       ? (o.hiddenBuiltinIds as string[]).filter((id) => typeof id === "string")
       : [];
-    return { activeModel, customModels, hiddenBuiltinIds };
+    const ollamaHost =
+      typeof o.ollamaHost === "string" ? o.ollamaHost : undefined;
+    const ollamaModel =
+      typeof o.ollamaModel === "string" ? o.ollamaModel : undefined;
+    return {
+      activeModel,
+      customModels,
+      hiddenBuiltinIds,
+      ...(ollamaHost !== undefined ? { ollamaHost } : {}),
+      ...(ollamaModel !== undefined ? { ollamaModel } : {}),
+    };
   } catch {
     return null;
   }
@@ -54,6 +64,8 @@ function createConf(): Conf<ConfigSchema> {
     activeModel: DEFAULT_ACTIVE_MODEL_ID,
     customModels: [],
     hiddenBuiltinIds: [],
+    ollamaHost: "http://127.0.0.1:11434",
+    ollamaModel: "qwen2.5-coder:7b",
   };
 
   try {
@@ -69,6 +81,8 @@ function createConf(): Conf<ConfigSchema> {
       activeModel: DEFAULT_ACTIVE_MODEL_ID,
       customModels: [],
       hiddenBuiltinIds: [],
+      ollamaHost: "http://127.0.0.1:11434",
+      ollamaModel: "qwen2.5-coder:7b",
     };
     writeFileConfig(merged);
     return new Conf<ConfigSchema>({
@@ -96,6 +110,8 @@ export function getStore(): Conf<ConfigSchema> {
         activeModel: DEFAULT_ACTIVE_MODEL_ID,
         customModels: [],
         hiddenBuiltinIds: [],
+        ollamaHost: "http://127.0.0.1:11434",
+        ollamaModel: "qwen2.5-coder:7b",
       };
       writeFileConfig(fallback);
       cached = createConf();
