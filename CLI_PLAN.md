@@ -174,7 +174,7 @@ So the updater writes consistently, use these shapes:
 **Status: implemented (MVP).**
 
 ### Objective
-- Add an interactive agent REPL so `npm run dev` or `brandoncode` starts a persistent terminal session that can chat, call tools, and continue until explicit exit.
+- Add an interactive agent REPL so `npm run dev` or `brandon` starts a persistent terminal session that can chat, call tools, and continue until explicit exit.
 
 ### Requirements implemented
 1. Create `src/agent/loop.ts`:
@@ -203,6 +203,19 @@ So the updater writes consistently, use these shapes:
 
 ### Scope note
 - This phase defines runtime agent behavior; existing model-management commands remain available and should be reconciled with REPL startup flow during implementation.
+
+## Phase 9: Planner + Worker Pipeline (Two-Agent Split)
+**Status: implemented.**
+
+### Objective
+- Implement a two-agent pipeline with clean separation between planning and execution.
+
+### Requirements implemented
+1. `src/agent/planner.ts` — `buildPlan(userInput)` loads `context/agent.md`, discovers up to five files (always including `context/agent.md` and `src/index.ts` when present), calls the planner model, returns structured Markdown with the six required sections.
+2. `src/agent/worker.ts` — `executeplan(plan)` runs the worker model with tools (streams to the terminal), returns JSON describing text + tool calls; does **not** use `loadContext()`.
+3. `src/agent/pipeline.ts` — `runPipeline(userInput)` prints `── planner ──` / `── worker ──`, approval `y` / `n` / `e` (`e` re-runs worker after `$EDITOR`; default `nano`).
+4. `src/agent/loop.ts` — REPL turns call `runPipeline` (startup Ollama check + greeting + context-finish unchanged).
+5. Config — `plannerModel` and `workerModel` in `~/.brandon-code/config.json` with merge from `~/.brandoncode/config.json`; `workerModel` defaults to `ollamaModel`, `plannerModel` defaults to `workerModel`.
 
 ## Suggested First Build Order
 1. Scaffold Node.js + TypeScript CLI project.

@@ -17,7 +17,7 @@ import { runAgentLoop } from "./agent/loop.js";
 const program = new Command();
 
 program
-  .name("brandon-code")
+  .name("brandon")
   .description("Brandon Code CLI — switch models and show a branded banner")
   .version("0.1.0")
   .option("--no-banner", "skip the startup banner")
@@ -112,9 +112,18 @@ program
   .command("agent")
   .description("Interactive Ollama agent REPL (default when no subcommand)")
   .option("--no-context-finish", "skip context update proposal on exit")
-  .action(async (opts: { noContextFinish?: boolean }) => {
-    await runAgentLoop({ skipContextFinish: Boolean(opts.noContextFinish) });
-  });
+  .option(
+    "--no-think",
+    "disable Ollama extended thinking (no think request / trace)"
+  )
+  .action(
+    async (opts: { noContextFinish?: boolean; noThink?: boolean }) => {
+      await runAgentLoop({
+        skipContextFinish: Boolean(opts.noContextFinish),
+        enableThinking: !opts.noThink,
+      });
+    }
+  );
 
 ctxRoot
   .command("finish")

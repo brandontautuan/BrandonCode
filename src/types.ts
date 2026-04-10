@@ -17,4 +17,15 @@ export interface ConfigSchema {
   ollamaHost?: string;
   /** Ollama model name for the agent REPL (e.g. `qwen2.5-coder:7b`). */
   ollamaModel?: string;
+  /** Planner step model; defaults to `workerModel` when unset. */
+  plannerModel?: string;
+  /** Worker step model; defaults to `ollamaModel` when unset. */
+  workerModel?: string;
+  /** Next index into `GREETINGS` for rotating agent REPL welcome lines (persisted). */
+  greetingRotationIndex?: number;
+  /**
+   * Ollama extended thinking: `true` or a level if the model supports it; `false` to disable.
+   * See https://github.com/ollama/ollama-js — `think` on chat requests.
+   */
+  ollamaThink?: boolean | "high" | "medium" | "low";
 }

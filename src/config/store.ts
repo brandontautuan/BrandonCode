@@ -42,12 +42,38 @@ function readFileConfig(): ConfigSchema | null {
       typeof o.ollamaHost === "string" ? o.ollamaHost : undefined;
     const ollamaModel =
       typeof o.ollamaModel === "string" ? o.ollamaModel : undefined;
+    const plannerModel =
+      typeof o.plannerModel === "string" ? o.plannerModel : undefined;
+    const workerModel =
+      typeof o.workerModel === "string" ? o.workerModel : undefined;
+    const greetingRotationIndex =
+      typeof o.greetingRotationIndex === "number" &&
+      Number.isInteger(o.greetingRotationIndex) &&
+      o.greetingRotationIndex >= 0
+        ? o.greetingRotationIndex
+        : undefined;
+    let ollamaThink: ConfigSchema["ollamaThink"];
+    if (typeof o.ollamaThink === "boolean") {
+      ollamaThink = o.ollamaThink;
+    } else if (
+      o.ollamaThink === "high" ||
+      o.ollamaThink === "medium" ||
+      o.ollamaThink === "low"
+    ) {
+      ollamaThink = o.ollamaThink;
+    }
     return {
       activeModel,
       customModels,
       hiddenBuiltinIds,
       ...(ollamaHost !== undefined ? { ollamaHost } : {}),
       ...(ollamaModel !== undefined ? { ollamaModel } : {}),
+      ...(plannerModel !== undefined ? { plannerModel } : {}),
+      ...(workerModel !== undefined ? { workerModel } : {}),
+      ...(greetingRotationIndex !== undefined
+        ? { greetingRotationIndex }
+        : {}),
+      ...(ollamaThink !== undefined ? { ollamaThink } : {}),
     };
   } catch {
     return null;
@@ -66,6 +92,8 @@ function createConf(): Conf<ConfigSchema> {
     hiddenBuiltinIds: [],
     ollamaHost: "http://127.0.0.1:11434",
     ollamaModel: "qwen2.5-coder:7b",
+    greetingRotationIndex: 0,
+    ollamaThink: true,
   };
 
   try {
@@ -83,6 +111,8 @@ function createConf(): Conf<ConfigSchema> {
       hiddenBuiltinIds: [],
       ollamaHost: "http://127.0.0.1:11434",
       ollamaModel: "qwen2.5-coder:7b",
+      greetingRotationIndex: 0,
+      ollamaThink: true,
     };
     writeFileConfig(merged);
     return new Conf<ConfigSchema>({
@@ -112,6 +142,8 @@ export function getStore(): Conf<ConfigSchema> {
         hiddenBuiltinIds: [],
         ollamaHost: "http://127.0.0.1:11434",
         ollamaModel: "qwen2.5-coder:7b",
+        greetingRotationIndex: 0,
+        ollamaThink: true,
       };
       writeFileConfig(fallback);
       cached = createConf();

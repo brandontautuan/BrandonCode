@@ -4,7 +4,7 @@
   "description": "Brandon Code CLI — model switching and terminal branding",
   "type": "module",
   "bin": {
-    "brandon-code": "./dist/index.js"
+    "brandon": "./dist/index.js"
   },
   "scripts": {
     "build": "tsc",
