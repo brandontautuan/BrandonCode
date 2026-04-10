@@ -25,7 +25,13 @@ export type WorkerResult = {
 
 export type ExecutePlanOptions = {
   enableThinking?: boolean;
+  onStage?: (shortLabel: string, detail?: string) => void;
 };
+
+function isThinkUnsupportedError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return /does not support thinking/i.test(msg);
+}
 
 /**
  * Run the worker model on the planner output. Streams to the terminal; returns proposals (including tool calls).
@@ -39,15 +45,28 @@ export async function executeplan(
   const ollama = new Ollama({ host });
   const think = getOllamaThinkForRequest(enableThinking);
 
+  opts.onStage?.("Running worker (stream + tools)…");
+
   const messages: Message[] = [
     { role: "system", content: workerSystemPrompt() },
     { role: "user", content: plan },
   ];
 
-  const assistant = await streamChatCompletion(ollama, workerModel, messages, {
-    tools: AGENT_TOOLS,
-    ...(think !== undefined ? { think } : {}),
-  });
+  let assistant;
+  try {
+    assistant = await streamChatCompletion(ollama, workerModel, messages, {
+      tools: AGENT_TOOLS,
+      ...(think !== undefined ? { think } : {}),
+    });
+  } catch (err) {
+    if (think === undefined || !isThinkUnsupportedError(err)) {
+      throw err;
+    }
+    // Fall back for models that reject `think` but still support tool-calling.
+    assistant = await streamChatCompletion(ollama, workerModel, messages, {
+      tools: AGENT_TOOLS,
+    });
+  }
 
   const toolCalls = assistant?.tool_calls ?? [];
   const content = String(assistant?.content ?? "");

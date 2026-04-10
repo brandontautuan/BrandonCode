@@ -204,6 +204,20 @@ So the updater writes consistently, use these shapes:
 ### Scope note
 - This phase defines runtime agent behavior; existing model-management commands remain available and should be reconciled with REPL startup flow during implementation.
 
+## Phase 6: Future Enhancements (UX / config slice)
+**Status: implemented (additive slice; see `DEFERRED_PHASE6_INTEGRATION_HOOKS` in `src/config/deferredPhase6Integration.ts`).**
+
+### Delivered (without editing conflict-prone entrypoints)
+- **Interactive model picker:** `npm run pick-model` → `src/cli/model-pick.ts` → `cmdModelPick()` in `src/commands/modelPicker.ts`. Non-TTY: exit `1` and print `brandon model list` / `brandon model switch <id>` guidance.
+- **Per-project model override:** `.brandon-code/project.json` or `.brandoncode/project.json` in the working tree with `{ "activeModel": "<id>" }`; `resolveActiveModelWithProject()` in `src/config/projectModelResolver.ts` (callers adopt when `loop` / `store` can be wired).
+- **Provider profiles:** `~/.brandon-code/provider-profiles.json` parsed via `parseProviderProfilesJson` / `loadProviderProfilesFromDisk()` (`src/config/providerProfiles.ts`, `providerProfilesFile.ts`).
+- **Banner theme presets:** `default`, `ocean`, `ember`, `mono` in `src/ui/bannerThemes.ts`; selection via `BRANDON_BANNER_THEME` or `banner-theme.json` `{ "preset": "ocean" }` (`bannerThemeConfig.ts`). `showBanner({ themeId })` for tests.
+
+### Deferred wiring (follow-up when `src/index.ts` / `src/config/store.ts` / `src/agent/loop.ts` are safe to change)
+- Register `brandon model pick` next to other `model` subcommands.
+- Use `resolveActiveModelWithProject` in the agent REPL / pipeline.
+- Optional persistence of theme / profile picks in Conf-backed store.
+
 ## Phase 9: Planner + Worker Pipeline (Two-Agent Split)
 **Status: implemented.**
 
@@ -216,6 +230,11 @@ So the updater writes consistently, use these shapes:
 3. `src/agent/pipeline.ts` — `runPipeline(userInput)` prints `── planner ──` / `── worker ──`, approval `y` / `n` / `e` (`e` re-runs worker after `$EDITOR`; default `nano`).
 4. `src/agent/loop.ts` — REPL turns call `runPipeline` (startup Ollama check + greeting + context-finish unchanged).
 5. Config — `plannerModel` and `workerModel` in `~/.brandon-code/config.json` with merge from `~/.brandoncode/config.json`; `workerModel` defaults to `ollamaModel`, `plannerModel` defaults to `workerModel`.
+
+### Observability (activity + diagnostics)
+- Concise by default: dim `⋯` lines during planner (context/files → planner model) and worker (stream + tools).
+- Verbose: same stages plus indented detail (paths, capped). Errors: one-line summary; full stack only in verbose.
+- Toggle: `brandon agent --activity-diagnostics`, or `"activity": "verbose"` in config, or `BRANDON_ACTIVITY=verbose`. Logs use `redactForLogs()` for common secret patterns (best-effort).
 
 ## Suggested First Build Order
 1. Scaffold Node.js + TypeScript CLI project.

@@ -10,6 +10,7 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts",
+    "pick-model": "node dist/cli/model-pick.js",
     "test": "vitest run"
   },
   "engines": {

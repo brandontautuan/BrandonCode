@@ -62,6 +62,10 @@ function readFileConfig(): ConfigSchema | null {
     ) {
       ollamaThink = o.ollamaThink;
     }
+    const activity =
+      o.activity === "verbose" || o.activity === "concise"
+        ? o.activity
+        : undefined;
     return {
       activeModel,
       customModels,
@@ -74,6 +78,7 @@ function readFileConfig(): ConfigSchema | null {
         ? { greetingRotationIndex }
         : {}),
       ...(ollamaThink !== undefined ? { ollamaThink } : {}),
+      ...(activity !== undefined ? { activity } : {}),
     };
   } catch {
     return null;

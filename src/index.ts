@@ -116,11 +116,20 @@ program
     "--no-think",
     "disable Ollama extended thinking (no think request / trace)"
   )
+  .option(
+    "--activity-diagnostics",
+    "verbose pipeline stage detail and full error diagnostics (or set activity: verbose in config)"
+  )
   .action(
-    async (opts: { noContextFinish?: boolean; noThink?: boolean }) => {
+    async (opts: {
+      noContextFinish?: boolean;
+      noThink?: boolean;
+      activityDiagnostics?: boolean;
+    }) => {
       await runAgentLoop({
         skipContextFinish: Boolean(opts.noContextFinish),
         enableThinking: !opts.noThink,
+        activityDiagnostics: Boolean(opts.activityDiagnostics),
       });
     }
   );

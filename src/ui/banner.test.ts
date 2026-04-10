@@ -21,7 +21,16 @@ describe("banner", () => {
     expect(maxW).toBeLessThanOrEqual(100);
 
     const joined = lines.join("\n");
-    expect(joined).toMatch(/AI CLI.*gemini/i);
+    expect(joined).toMatch(/AI CLI/i);
     expect(joined).toMatch(/\| .* \|/);
+  });
+
+  it("uses theme preset subtitle when themeId is set", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    await showBanner({ themeId: "ocean" });
+
+    const output = String(log.mock.calls[0]?.[0] ?? "");
+    expect(output).toMatch(/calm/i);
   });
 });

@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import { Ollama } from "ollama";
+import type { Message } from "ollama";
 import {
   getOllamaThinkForRequest,
   getPipelineModels,
@@ -45,7 +46,14 @@ function buildPlannerSystemPrompt(): string {
 
 export type BuildPlanOptions = {
   enableThinking?: boolean;
+  /** Optional status lines (concise or verbose detail) for REPL observability. */
+  onStage?: (shortLabel: string, detail?: string) => void;
 };
+
+function isThinkUnsupportedError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return /does not support thinking/i.test(msg);
+}
 
 /**
  * Build a structured plan from user input: loads agent context, discovers up to 5 files, calls the planner model.
@@ -55,8 +63,14 @@ export async function buildPlan(
   opts: BuildPlanOptions = {}
 ): Promise<string> {
   const enableThinking = opts.enableThinking !== false;
+  const onStage = opts.onStage;
+  onStage?.("Reading context & choosing relevant files…");
   const ctx = loadContext().trim();
   const paths = discoverRelevantFilePaths(userInput);
+  onStage?.(
+    "Loading file snippets for the planner",
+    paths.length > 0 ? paths.join("\n") : "(no extra files)"
+  );
 
   const fileBlocks: string[] = [];
   for (const p of paths) {
@@ -77,15 +91,31 @@ export async function buildPlan(
   const { host, plannerModel } = getPipelineModels();
   const ollama = new Ollama({ host });
   const think = getOllamaThinkForRequest(enableThinking);
+  const messages: Message[] = [
+    { role: "system", content: buildPlannerSystemPrompt() },
+    { role: "user", content: userPayload },
+  ];
 
-  const res = await ollama.chat({
+  const baseReq = {
     model: plannerModel,
-    messages: [
-      { role: "system", content: buildPlannerSystemPrompt() },
-      { role: "user", content: userPayload },
-    ],
-    ...(think !== undefined ? { think } : {}),
-  });
+    messages,
+  };
+
+  onStage?.("Calling planner model…");
+
+  let res;
+  try {
+    res = await ollama.chat({
+      ...baseReq,
+      ...(think !== undefined ? { think } : {}),
+    });
+  } catch (err) {
+    if (think === undefined || !isThinkUnsupportedError(err)) {
+      throw err;
+    }
+    // Mixed-model stacks are common; retry once without think.
+    res = await ollama.chat(baseReq);
+  }
 
   return res.message?.content?.trim() ?? "";
 }

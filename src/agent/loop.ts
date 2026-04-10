@@ -13,6 +13,13 @@ export {
 
 export const MAX_TOOL_ROUNDS_PER_TURN = 8;
 
+function parseApproval(line: string): "y" | "n" | "e" {
+  const first = line.trim().toLowerCase()[0];
+  if (first === "e") return "e";
+  if (first === "y") return "y";
+  return "n";
+}
+
 /** Undici often reports ECONNREFUSED as the unhelpful string "fetch failed". */
 function formatOllamaError(err: unknown, host: string, model: string): string {
   const msg = err instanceof Error ? err.message : String(err);
@@ -45,6 +52,8 @@ export type AgentLoopOptions = {
   skipContextFinish?: boolean;
   /** When false, do not request or print Ollama extended thinking. */
   enableThinking?: boolean;
+  /** Verbose pipeline stages + full error diagnostics (see `brandon agent --activity-diagnostics`). */
+  activityDiagnostics?: boolean;
 };
 
 export async function runAgentLoop(opts: AgentLoopOptions = {}): Promise<void> {
@@ -80,7 +89,12 @@ export async function runAgentLoop(opts: AgentLoopOptions = {}): Promise<void> {
       if (input === "exit" || input === "quit") break;
 
       try {
-        await runPipeline(input, { enableThinking });
+        await runPipeline(input, {
+          enableThinking,
+          activityDiagnostics: opts.activityDiagnostics,
+          promptApproval: async () =>
+            parseApproval(await rl.question(chalk.cyan("Apply? [y/n/e]: "))),
+        });
       } catch (e) {
         console.error(chalk.red(formatOllamaError(e, host, workerModel)));
       }

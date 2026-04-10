@@ -1,5 +1,8 @@
 import chalk from "chalk";
 import figlet from "figlet";
+import type { BannerTheme } from "./bannerThemes.js";
+import { getBannerThemeById } from "./bannerThemes.js";
+import { resolveBannerThemeName } from "./bannerThemeConfig.js";
 
 /** Outer width of boxed lines (`| ` … ` |`) — keeps banner within 100 columns. */
 const MAX_TOTAL_WIDTH = 100;
@@ -8,7 +11,6 @@ const MAX_TOTAL_WIDTH = 100;
 const INNER_MAX = MAX_TOTAL_WIDTH - 4;
 
 const TITLE = "BrandonCode";
-const SUBTITLE = "  AI CLI · gemini · ollama · minimax";
 
 const GAP = "  ";
 
@@ -33,10 +35,6 @@ const SYMBOL_WIDTH = Math.max(
 const SYMBOL_LINES = SYMBOL_LINES_RAW.map((l) =>
   l.length < SYMBOL_WIDTH ? l + " ".repeat(SYMBOL_WIDTH - l.length) : l
 );
-
-/** Cyan (left) → magenta (right) across the title. */
-const GRADIENT_START: [number, number, number] = [0, 220, 255];
-const GRADIENT_END: [number, number, number] = [255, 40, 220];
 
 function gradientText(
   text: string,
@@ -121,7 +119,9 @@ function buildSymbolColumn(rows: number): string[] {
   return sym.slice(0, rows);
 }
 
-async function buildBannerString(): Promise<string> {
+async function buildBannerString(theme: BannerTheme): Promise<string> {
+  const gStart = theme.gradientStart;
+  const gEnd = theme.gradientEnd;
   const figLinesPlain = await renderFigletTitle();
   const rows = Math.max(figLinesPlain.length, SYMBOL_LINES.length);
   const symCol = buildSymbolColumn(rows);
@@ -134,14 +134,16 @@ async function buildBannerString(): Promise<string> {
   const titleRows: string[] = [];
   for (let i = 0; i < rows; i++) {
     const plainLeft = clampPlain(figLinesPlain[i] ?? "", leftMax);
-    const leftColored = gradientText(plainLeft, GRADIENT_START, GRADIENT_END);
-    const [r, g, b] = rowRgb(i, rows, GRADIENT_START, GRADIENT_END);
+    const leftColored = gradientText(plainLeft, gStart, gEnd);
+    const [r, g, b] = rowRgb(i, rows, gStart, gEnd);
     const right = chalk.rgb(r, g, b)(symCol[i] ?? "");
     titleRows.push(leftColored + GAP + right);
   }
 
   const subtitlePlain =
-    SUBTITLE.length > INNER_MAX ? SUBTITLE.slice(0, INNER_MAX) : SUBTITLE;
+    theme.subtitle.length > INNER_MAX
+      ? theme.subtitle.slice(0, INNER_MAX)
+      : theme.subtitle;
   const subtitleLine = chalk.dim(subtitlePlain);
 
   const bodyLines = [...titleRows, subtitleLine];
@@ -165,12 +167,19 @@ async function buildBannerString(): Promise<string> {
   return [top, ...boxed, bottom].join("\n");
 }
 
+export type ShowBannerOptions = {
+  /** When set, use this preset id instead of env / `banner-theme.json`. */
+  themeId?: string;
+};
+
 /**
- * Print a bordered “hacker terminal” banner (figlet **Slant** + cyan→magenta gradient + ASCII symbol).
- * Other dramatic fonts (often wider): `Ghost`, `Big`, `Standard` — Slant fits ~100 cols best.
+ * Print a bordered “hacker terminal” banner (figlet **Slant** + gradient + ASCII symbol).
+ * Theme: `BRANDON_BANNER_THEME`, optional `~/.brandon-code/banner-theme.json` `{ "preset": "ocean" }`, or `themeId` here.
  */
-export async function showBanner(): Promise<void> {
-  const text = await buildBannerString();
+export async function showBanner(opts?: ShowBannerOptions): Promise<void> {
+  const id = opts?.themeId ?? resolveBannerThemeName();
+  const theme = getBannerThemeById(id);
+  const text = await buildBannerString(theme);
   console.log(text);
   console.log();
 }

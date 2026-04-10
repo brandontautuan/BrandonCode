@@ -42,9 +42,13 @@ describe("runPipeline integration", () => {
       logError,
     });
 
-    expect(buildPlanFn).toHaveBeenCalledWith("add feature X", {
-      enableThinking: false,
-    });
+    expect(buildPlanFn).toHaveBeenCalledWith(
+      "add feature X",
+      expect.objectContaining({
+        enableThinking: false,
+        onStage: expect.any(Function),
+      })
+    );
     expect(executeplanFn).toHaveBeenCalledTimes(1);
     expect(wf).toHaveBeenCalledTimes(1);
     expect(wf.mock.calls[0][0]).toMatch(/integration-happy\.txt$/);
@@ -93,6 +97,20 @@ describe("runPipeline integration", () => {
     expect(wf).toHaveBeenCalledTimes(1);
     expect(wf.mock.calls[0][0]).toMatch(/after-edit\.txt$/);
     expect(wf.mock.calls[0][1]).toBe("final-body");
+  });
+
+  it("uses activity sink when logError is not provided", async () => {
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    await runPipeline("x", {
+      enableThinking: false,
+      activityMode: "concise",
+      buildPlanFn: async () => {
+        throw new Error("planner: failed");
+      },
+    });
+    const text = err.mock.calls.map((c) => String(c[0])).join("\n");
+    expect(text).toMatch(/planner: failed/);
+    err.mockRestore();
   });
 
   it("surfaces planner failure without calling worker or applying writes", async () => {

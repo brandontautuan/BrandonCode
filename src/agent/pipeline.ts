@@ -5,6 +5,8 @@ import os from "node:os";
 import path from "node:path";
 import { createInterface } from "node:readline/promises";
 import type { ToolCall } from "ollama";
+import { resolveActivityMode } from "../config/observabilitySettings.js";
+import { createActivitySink, type ActivityMode } from "./activitySink.js";
 import { buildPlan } from "./planner.js";
 import type { WorkerResult } from "./worker.js";
 import { executeplan } from "./worker.js";
@@ -47,21 +49,38 @@ async function applyWriteProposals(toolCalls: ToolCall[]): Promise<void> {
   }
 }
 
+function parseApproval(line: string): "y" | "n" | "e" {
+  const first = line.trim().toLowerCase()[0];
+  if (first === "e") return "e";
+  if (first === "y") return "y";
+  return "n";
+}
+
 async function defaultPromptApproval(): Promise<"y" | "n" | "e"> {
   const rl = createInterface({
     input: process.stdin,
     output: process.stdout,
   });
   try {
-    const line = (await rl.question(chalk.cyan("Apply? [y/n/e]: ")))
-      .trim()
-      .toLowerCase();
-    if (line === "e" || line === "edit") return "e";
-    if (line === "y" || line === "yes") return "y";
-    return "n";
+    const line = await rl.question(chalk.cyan("Apply? [y/n/e]: "));
+    return parseApproval(line);
   } finally {
     rl.close();
   }
+}
+
+function shouldRunWorkerForInput(userInput: string): boolean {
+  const s = userInput.trim().toLowerCase();
+  if (!s) return false;
+  const reportIntent =
+    /\b(report|review|summary|summarize|overview|describe|explain)\b/.test(s) ||
+    /\bwhat does\b/.test(s);
+  const executionIntent =
+    /\b(fix|implement|code|edit|update|refactor|create|add|remove|delete|patch|write|run|execute|command|tool|apply|change)\b/.test(
+      s
+    );
+  if (reportIntent && !executionIntent) return false;
+  return true;
 }
 
 function editPlanInEditor(plan: string): string {
@@ -104,19 +123,23 @@ export type RunPipelineOptions = {
   promptApproval?: () => Promise<"y" | "n" | "e">;
   /** Test hook: replace `$EDITOR` flow. */
   editPlanInEditorFn?: (plan: string) => string;
-  /** Override error sink (default: `console.error` in red). */
+  /** Override error sink (default: activity sink with concise/verbose rules). */
   logError?: (message: string) => void;
+  /** Force verbose activity + full errors (e.g. `brandon agent --activity-diagnostics`). */
+  activityDiagnostics?: boolean;
+  /** Override config/env activity mode (for tests). */
+  activityMode?: ActivityMode;
 };
-
-function defaultLogError(message: string): void {
-  console.error(chalk.red(message));
-}
 
 export async function runPipeline(
   userInput: string,
   opts: RunPipelineOptions = {}
 ): Promise<void> {
-  const logError = opts.logError ?? defaultLogError;
+  const mode: ActivityMode =
+    opts.activityDiagnostics === true
+      ? "verbose"
+      : (opts.activityMode ?? resolveActivityMode());
+  const sink = createActivitySink(mode);
 
   try {
     const enableThinking = opts.enableThinking !== false;
@@ -126,16 +149,26 @@ export async function runPipeline(
     const editPlan = opts.editPlanInEditorFn ?? editPlanInEditor;
 
     console.log(chalk.dim("── planner ──"));
-    let plan = await build(userInput, { enableThinking });
+    let plan = await build(userInput, {
+      enableThinking,
+      onStage: sink.stage,
+    });
     if (plan.trim()) {
       console.log(plan + "\n");
     } else {
       console.log(chalk.yellow("(planner returned empty plan)\n"));
     }
 
+    if (!shouldRunWorkerForInput(userInput)) {
+      return;
+    }
+
     while (true) {
       console.log(chalk.dim("── worker ──"));
-      const raw = await runWorker(plan, { enableThinking });
+      const raw = await runWorker(plan, {
+        enableThinking,
+        onStage: sink.stage,
+      });
       const parsed = parseWorkerJson(raw);
 
       const action = await ask();
@@ -149,7 +182,12 @@ export async function runPipeline(
       plan = editPlan(plan);
     }
   } catch (e) {
-    const msg = e instanceof Error ? e.message : `Pipeline error: ${String(e)}`;
-    logError(msg);
+    if (opts.logError) {
+      const msg =
+        e instanceof Error ? e.message : `Pipeline error: ${String(e)}`;
+      opts.logError(msg);
+    } else {
+      sink.reportError(e);
+    }
   }
 }

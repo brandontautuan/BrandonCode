@@ -75,4 +75,19 @@ describe("pipeline", () => {
     expect(buildPlanFn).toHaveBeenCalledTimes(1);
     expect(executeplanFn).toHaveBeenCalledTimes(2);
   });
+
+  it("skips worker for report-style requests", async () => {
+    const executeplanFn = vi.fn().mockResolvedValue(
+      JSON.stringify({ content: "done", toolCalls: [] })
+    );
+    await runPipeline(
+      "review the codebase and give me a couple sentence report",
+      {
+        enableThinking: false,
+        buildPlanFn: async () => "report text",
+        executeplanFn,
+      }
+    );
+    expect(executeplanFn).not.toHaveBeenCalled();
+  });
 });

@@ -28,4 +28,9 @@ export interface ConfigSchema {
    * See https://github.com/ollama/ollama-js — `think` on chat requests.
    */
   ollamaThink?: boolean | "high" | "medium" | "low";
+  /**
+   * REPL pipeline activity: concise (default) = short stage lines; verbose = extra detail + full errors.
+   * Override with `BRANDON_ACTIVITY=verbose` or `--activity-diagnostics` on `brandon agent`.
+   */
+  activity?: "concise" | "verbose";
 }
