@@ -8,6 +8,8 @@ import {
 export type StreamChatOptions = {
   tools?: Tool[];
   think?: boolean | "high" | "medium" | "low";
+  maxTokens?: number;
+  contextLimit?: number;
 };
 
 /**
@@ -28,12 +30,16 @@ export async function streamChatCompletion(
           tools: opts.tools,
           stream: true,
           ...(opts.think !== undefined ? { think: opts.think } : {}),
+          ...(opts.maxTokens !== undefined ? { num_predict: opts.maxTokens } : {}),
+          ...(opts.contextLimit !== undefined ? { num_ctx: opts.contextLimit } : {}),
         }
       : {
           model,
           messages,
           stream: true,
           ...(opts.think !== undefined ? { think: opts.think } : {}),
+          ...(opts.maxTokens !== undefined ? { num_predict: opts.maxTokens } : {}),
+          ...(opts.contextLimit !== undefined ? { num_ctx: opts.contextLimit } : {}),
         }
   )) as AsyncIterable<ChatResponse>;
 

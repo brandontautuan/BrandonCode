@@ -3,17 +3,20 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-describe("contextLoader", () => {
+describe("ensureAgentContextFile", () => {
   let tmp: string;
+  let prevRoot: string | undefined;
 
   beforeEach(() => {
     tmp = fs.mkdtempSync(path.join(os.tmpdir(), "bc-ctx-"));
+    prevRoot = process.env.BRANDON_CODE_CONTEXT_ROOT;
     process.env.BRANDON_CODE_CONTEXT_ROOT = tmp;
     vi.resetModules();
   });
 
   afterEach(() => {
-    delete process.env.BRANDON_CODE_CONTEXT_ROOT;
+    if (prevRoot === undefined) delete process.env.BRANDON_CODE_CONTEXT_ROOT;
+    else process.env.BRANDON_CODE_CONTEXT_ROOT = prevRoot;
     try {
       fs.rmSync(tmp, { recursive: true, force: true });
     } catch {
@@ -21,17 +24,16 @@ describe("contextLoader", () => {
     }
   });
 
-  it("loadContext returns empty string when agent.md is missing", async () => {
-    const { loadContext } = await import("./contextLoader.js");
-    expect(loadContext()).toBe("");
-  });
-
-  it("loadContext reads agent.md when present", async () => {
-    const dir = path.join(tmp, "context");
-    fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(path.join(dir, "agent.md"), "# Hello\n", "utf8");
-    vi.resetModules();
-    const { loadContext } = await import("./contextLoader.js");
-    expect(loadContext().trim()).toBe("# Hello");
+  it("creates context/agent.md with What NOT to do when missing", async () => {
+    const { ensureAgentContextFile, loadContext } = await import(
+      "./contextLoader.js"
+    );
+    expect(ensureAgentContextFile()).toBe(true);
+    const p = path.join(tmp, "context", "agent.md");
+    expect(fs.existsSync(p)).toBe(true);
+    const text = loadContext();
+    expect(text).toMatch(/What NOT to do/);
+    expect(text).toMatch(/Don't commit API keys/i);
+    expect(ensureAgentContextFile()).toBe(false);
   });
 });

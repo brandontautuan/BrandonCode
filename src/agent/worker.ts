@@ -11,9 +11,10 @@ function workerSystemPrompt(): string {
   return [
     "You are the worker for BrandonCode.",
     "You receive a single structured plan (Markdown) from the planner.",
-    "Implement the plan using tool calls: read_file, write_file, run_bash as needed.",
-    "Prefer small, clear edits. Stream your reasoning in normal text; use tools for real actions.",
-    "Do not ask to load separate project context files — the plan already contains what you need.",
+    "Execute the plan using tool calls. Output tool calls as JSON: {\"name\": \"read_file\", \"arguments\": {\"path\": \"...\"}}, then {\"name\": \"write_file\", \"arguments\": {\"path\": \"...\", \"content\": \"...\"}}.",
+    "For every file edit: (1) call read_file to get current content, (2) modify it, (3) call write_file with modified content.",
+    "Reason in text before and after tool calls. Never skip the actual tool calls — always execute them.",
+    "Do not ask for permission or describe steps. Just do the work.",
   ].join(" ");
 }
 
@@ -41,11 +42,11 @@ export async function executeplan(
   opts: ExecutePlanOptions = {}
 ): Promise<string> {
   const enableThinking = opts.enableThinking !== false;
-  const { host, workerModel } = getPipelineModels();
+  const { host, workerModel, maxTokens, contextLimit } = getPipelineModels();
   const ollama = new Ollama({ host });
   const think = getOllamaThinkForRequest(enableThinking);
 
-  opts.onStage?.("Running worker (stream + tools)…");
+  opts.onStage?.("Running worker (stream + tools)…", `model: ${workerModel}`);
 
   const messages: Message[] = [
     { role: "system", content: workerSystemPrompt() },
@@ -57,6 +58,8 @@ export async function executeplan(
     assistant = await streamChatCompletion(ollama, workerModel, messages, {
       tools: AGENT_TOOLS,
       ...(think !== undefined ? { think } : {}),
+      maxTokens,
+      contextLimit,
     });
   } catch (err) {
     if (think === undefined || !isThinkUnsupportedError(err)) {
@@ -65,6 +68,8 @@ export async function executeplan(
     // Fall back for models that reject `think` but still support tool-calling.
     assistant = await streamChatCompletion(ollama, workerModel, messages, {
       tools: AGENT_TOOLS,
+      maxTokens,
+      contextLimit,
     });
   }
 

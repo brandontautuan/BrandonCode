@@ -148,7 +148,9 @@ export async function runPipeline(
     const ask = opts.promptApproval ?? defaultPromptApproval;
     const editPlan = opts.editPlanInEditorFn ?? editPlanInEditor;
 
-    console.log(chalk.dim("── planner ──"));
+    console.log(chalk.dim("═══════════════════════════════════════"));
+    console.log(chalk.dim("STAGE 1/2: Planner (generates plan)"));
+    console.log(chalk.dim("──────────────────────────────────────"));
     let plan = await build(userInput, {
       enableThinking,
       onStage: sink.stage,
@@ -163,8 +165,12 @@ export async function runPipeline(
       return;
     }
 
+    console.log(chalk.dim("═══════════════════════════════════════"));
+    console.log(chalk.dim("STAGE 2/2: Worker (executes plan)"));
+    console.log(chalk.dim("──────────────────────────────────────"));
+
     while (true) {
-      console.log(chalk.dim("── worker ──"));
+      console.log(chalk.dim(""));
       const raw = await runWorker(plan, {
         enableThinking,
         onStage: sink.stage,
@@ -174,9 +180,11 @@ export async function runPipeline(
       const action = await ask();
       if (action === "y") {
         await applyWriteProposals(parsed.toolCalls);
+        console.log(chalk.green("✓ Applied.") + "\n");
         return;
       }
       if (action === "n") {
+        console.log(chalk.dim("Skipped.") + "\n");
         return;
       }
       plan = editPlan(plan);

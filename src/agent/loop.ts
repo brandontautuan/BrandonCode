@@ -2,6 +2,13 @@ import chalk from "chalk";
 import { Ollama } from "ollama";
 import { createInterface } from "node:readline/promises";
 import { getPipelineModels } from "../config/ollamaSettings.js";
+import {
+  isContextEmpty,
+  populateContextFromCodebase,
+  printLoserExit,
+  promptPopulateContext,
+} from "../context/contextBootstrap.js";
+import { loadContext, ensureAgentContextFile } from "../context/contextLoader.js";
 import { runContextFinishFlow } from "../context/contextUpdater.js";
 import { nextGreeting } from "./greetings.js";
 import { runPipeline } from "./pipeline.js";
@@ -58,6 +65,9 @@ export type AgentLoopOptions = {
 
 export async function runAgentLoop(opts: AgentLoopOptions = {}): Promise<void> {
   const enableThinking = opts.enableThinking !== false;
+  ensureAgentContextFile();
+  const contextText = loadContext();
+
   const { host, workerModel } = getPipelineModels();
   const ollama = new Ollama({ host });
 
@@ -74,14 +84,37 @@ export async function runAgentLoop(opts: AgentLoopOptions = {}): Promise<void> {
       `Ollama: ${chalk.bold(workerModel)} @ ${host} — type ${chalk.bold("exit")} to quit.\n`
     )
   );
-  console.log(chalk.green(nextGreeting()) + "\n");
 
   const rl = createInterface({
     input: process.stdin,
     output: process.stdout,
   });
 
+  let loserExit = false;
   try {
+    if (isContextEmpty(contextText)) {
+      const populate = await promptPopulateContext(rl);
+      if (!populate) {
+        printLoserExit();
+        loserExit = true;
+        return;
+      }
+      try {
+        await populateContextFromCodebase({
+          ollama,
+          model: workerModel,
+          enableThinking,
+        });
+        loadContext();
+      } catch (e) {
+        console.error(chalk.red(formatOllamaError(e, host, workerModel)));
+        loserExit = true;
+        return;
+      }
+    }
+
+    console.log(chalk.green(nextGreeting()) + "\n");
+
     while (true) {
       const line = await rl.question(chalk.cyan("you> "));
       const input = line.trim();
@@ -102,6 +135,8 @@ export async function runAgentLoop(opts: AgentLoopOptions = {}): Promise<void> {
   } finally {
     rl.close();
   }
+
+  if (loserExit) return;
 
   if (opts.skipContextFinish) {
     console.log(chalk.dim("Skipping context update (--no-context-finish)."));

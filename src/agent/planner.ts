@@ -88,7 +88,7 @@ export async function buildPlan(
     fileBlocks.join("\n\n"),
   ].join("\n");
 
-  const { host, plannerModel } = getPipelineModels();
+  const { host, plannerModel, maxTokens, contextLimit } = getPipelineModels();
   const ollama = new Ollama({ host });
   const think = getOllamaThinkForRequest(enableThinking);
   const messages: Message[] = [
@@ -99,9 +99,11 @@ export async function buildPlan(
   const baseReq = {
     model: plannerModel,
     messages,
+    ...(maxTokens !== undefined ? { num_predict: maxTokens } : {}),
+    ...(contextLimit !== undefined ? { num_ctx: contextLimit } : {}),
   };
 
-  onStage?.("Calling planner model…");
+  onStage?.("Calling planner model…", `model: ${plannerModel}`);
 
   let res;
   try {

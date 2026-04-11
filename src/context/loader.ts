@@ -3,6 +3,7 @@
  * Re-export from a single implementation.
  */
 export {
+  ensureAgentContextFile,
   getLoadedContext,
   loadContext,
 } from "./contextLoader.js";

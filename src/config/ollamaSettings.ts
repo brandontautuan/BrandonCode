@@ -13,6 +13,8 @@ function readLegacyBrandoncodeFile(): Partial<{
   plannerModel: string;
   workerModel: string;
   ollamaThink: boolean | "high" | "medium" | "low";
+  maxTokens?: number;
+  contextLimit?: number;
 }> {
   try {
     const p = path.join(os.homedir(), ".brandoncode", "config.json");
@@ -35,6 +37,8 @@ function readLegacyBrandoncodeFile(): Partial<{
       ...(typeof o.plannerModel === "string" ? { plannerModel: o.plannerModel } : {}),
       ...(typeof o.workerModel === "string" ? { workerModel: o.workerModel } : {}),
       ...(ollamaThink !== undefined ? { ollamaThink } : {}),
+      ...(typeof o.maxTokens === "number" ? { maxTokens: o.maxTokens } : {}),
+      ...(typeof o.contextLimit === "number" ? { contextLimit: o.contextLimit } : {}),
     };
   } catch {
     return {};
@@ -70,13 +74,15 @@ export function getOllamaSettings(): { host: string; model: string } {
 }
 
 /**
- * Planner + worker model names. `workerModel` defaults to `ollamaModel`;
+ * Planner + worker model names and limits. `workerModel` defaults to `ollamaModel`;
  * `plannerModel` defaults to `workerModel`.
  */
 export function getPipelineModels(): {
   host: string;
   plannerModel: string;
   workerModel: string;
+  maxTokens?: number;
+  contextLimit?: number;
 } {
   const store = getStore();
   const legacy = readLegacyBrandoncodeFile();
@@ -84,9 +90,13 @@ export function getPipelineModels(): {
     store.get("ollamaHost") ?? legacy.ollamaHost ?? DEFAULT_HOST;
   const ollamaModel =
     store.get("ollamaModel") ?? legacy.ollamaModel ?? DEFAULT_MODEL;
+  const plannerModel =
+    store.get("plannerModel") ?? legacy.plannerModel ?? "qwen2.5-coder:7b";
   const workerModel =
     store.get("workerModel") ?? legacy.workerModel ?? ollamaModel;
-  const plannerModel =
-    store.get("plannerModel") ?? legacy.plannerModel ?? workerModel;
-  return { host, plannerModel, workerModel };
+  const maxTokens =
+    (store.get("maxTokens") as number | undefined) ?? legacy.maxTokens;
+  const contextLimit =
+    (store.get("contextLimit") as number | undefined) ?? legacy.contextLimit;
+  return { host, plannerModel, workerModel, maxTokens, contextLimit };
 }
