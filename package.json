@@ -11,7 +11,10 @@
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts",
     "pick-model": "node dist/cli/model-pick.js",
-    "test": "vitest run"
+    "test": "vitest run",
+    "voice:wake": "python3 scripts/wake_listen.py",
+    "voice:wake:verbose": "VOICE_WAKE_VERBOSE=1 python3 scripts/wake_listen.py",
+    "voice:wake:sensitive": "VOICE_WAKE_SENSITIVE=1 VOICE_WAKE_VERBOSE=1 python3 scripts/wake_listen.py"
   },
   "engines": {
     "node": ">=20"

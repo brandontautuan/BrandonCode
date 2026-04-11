@@ -61,10 +61,13 @@ export type AgentLoopOptions = {
   enableThinking?: boolean;
   /** Verbose pipeline stages + full error diagnostics (see `brandon agent --activity-diagnostics`). */
   activityDiagnostics?: boolean;
+  /** Testing mode: run planner only and skip worker stage. */
+  plannerOnly?: boolean;
 };
 
 export async function runAgentLoop(opts: AgentLoopOptions = {}): Promise<void> {
   const enableThinking = opts.enableThinking !== false;
+  const plannerOnly = opts.plannerOnly === true;
   ensureAgentContextFile();
   const contextText = loadContext();
 
@@ -81,9 +84,13 @@ export async function runAgentLoop(opts: AgentLoopOptions = {}): Promise<void> {
 
   console.log(
     chalk.dim(
-      `Ollama: ${chalk.bold(workerModel)} @ ${host} — type ${chalk.bold("exit")} to quit.\n`
+      `Ollama: ${chalk.bold(workerModel)} @ ${host} — type ${chalk.bold("exit")} to quit.`
     )
   );
+  if (plannerOnly) {
+    console.log(chalk.dim("Mode: planner-only testing (worker disabled)."));
+  }
+  console.log("");
 
   const rl = createInterface({
     input: process.stdin,
@@ -124,6 +131,7 @@ export async function runAgentLoop(opts: AgentLoopOptions = {}): Promise<void> {
       try {
         await runPipeline(input, {
           enableThinking,
+          plannerOnly,
           activityDiagnostics: opts.activityDiagnostics,
           promptApproval: async () =>
             parseApproval(await rl.question(chalk.cyan("Apply? [y/n/e]: "))),

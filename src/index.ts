@@ -113,6 +113,10 @@ program
   .description("Interactive Ollama agent REPL (default when no subcommand)")
   .option("--no-context-finish", "skip context update proposal on exit")
   .option(
+    "--planner-only",
+    "testing mode: planner stage only; skip worker execution and tool apply"
+  )
+  .option(
     "--no-think",
     "disable Ollama extended thinking (no think request / trace)"
   )
@@ -123,11 +127,13 @@ program
   .action(
     async (opts: {
       noContextFinish?: boolean;
+      plannerOnly?: boolean;
       noThink?: boolean;
       activityDiagnostics?: boolean;
     }) => {
       await runAgentLoop({
         skipContextFinish: Boolean(opts.noContextFinish),
+        plannerOnly: Boolean(opts.plannerOnly),
         enableThinking: !opts.noThink,
         activityDiagnostics: Boolean(opts.activityDiagnostics),
       });

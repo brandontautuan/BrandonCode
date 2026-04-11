@@ -129,6 +129,8 @@ export type RunPipelineOptions = {
   activityDiagnostics?: boolean;
   /** Override config/env activity mode (for tests). */
   activityMode?: ActivityMode;
+  /** Testing mode: run planner only, skip worker/tool-apply stage entirely. */
+  plannerOnly?: boolean;
 };
 
 export async function runPipeline(
@@ -143,6 +145,7 @@ export async function runPipeline(
 
   try {
     const enableThinking = opts.enableThinking !== false;
+    const plannerOnly = opts.plannerOnly === true;
     const build = opts.buildPlanFn ?? buildPlan;
     const runWorker = opts.executeplanFn ?? executeplan;
     const ask = opts.promptApproval ?? defaultPromptApproval;
@@ -159,6 +162,11 @@ export async function runPipeline(
       console.log(plan + "\n");
     } else {
       console.log(chalk.yellow("(planner returned empty plan)\n"));
+    }
+
+    if (plannerOnly) {
+      console.log(chalk.dim("Testing mode: planner-only (worker disabled).\n"));
+      return;
     }
 
     if (!shouldRunWorkerForInput(userInput)) {

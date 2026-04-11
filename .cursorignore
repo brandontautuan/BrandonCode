@@ -1,0 +1,7 @@
+# Cursor indexing / AI context
+node_modules/
+dist/
+coverage/
+.reconstruct/
+.reconstuct/
+context/sessions/

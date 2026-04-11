@@ -90,4 +90,17 @@ describe("pipeline", () => {
     );
     expect(executeplanFn).not.toHaveBeenCalled();
   });
+
+  it("skips worker entirely in planner-only testing mode", async () => {
+    const executeplanFn = vi.fn().mockResolvedValue(
+      JSON.stringify({ content: "done", toolCalls: [] })
+    );
+    await runPipeline("implement feature x", {
+      enableThinking: false,
+      plannerOnly: true,
+      buildPlanFn: async () => "## Task\nplan-only",
+      executeplanFn,
+    });
+    expect(executeplanFn).not.toHaveBeenCalled();
+  });
 });

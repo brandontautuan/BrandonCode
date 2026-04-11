@@ -1,3 +1,4 @@
+# Dependencies & build
 node_modules/
 dist/
 *.log
@@ -17,4 +18,11 @@ coverage/
 *.crt
 *.cer
 *.jks
+
+# Local tooling / preferences (e.g. Reconstruct)
 .reconstruct/
+.reconstuct/
+
+# Context: generated or machine-local (keep context/agent.md tracked if you version it)
+context/sessions/
+context/decisions.md
