@@ -60,6 +60,7 @@ export async function executeplan(
       ...(think !== undefined ? { think } : {}),
       maxTokens,
       contextLimit,
+      keepAlive: 0,
     });
   } catch (err) {
     if (think === undefined || !isThinkUnsupportedError(err)) {
@@ -70,6 +71,7 @@ export async function executeplan(
       tools: AGENT_TOOLS,
       maxTokens,
       contextLimit,
+      keepAlive: 0,
     });
   }
 

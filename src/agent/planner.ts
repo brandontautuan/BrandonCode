@@ -99,6 +99,7 @@ export async function buildPlan(
   const baseReq = {
     model: plannerModel,
     messages,
+    keep_alive: 0,
     ...(maxTokens !== undefined ? { num_predict: maxTokens } : {}),
     ...(contextLimit !== undefined ? { num_ctx: contextLimit } : {}),
   };

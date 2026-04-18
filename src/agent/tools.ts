@@ -1,7 +1,6 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { spawn } from "node:child_process";
 import { createInterface } from "node:readline/promises";
 
 async function confirm(message: string): Promise<boolean> {
@@ -33,11 +32,6 @@ function resolvePath(p: string): string {
     : path.resolve(process.cwd(), trimmed);
 }
 
-export async function readFileTool(filePath: string): Promise<string> {
-  const target = resolvePath(filePath);
-  return fs.readFile(target, "utf8");
-}
-
 export async function writeFileTool(
   filePath: string,
   content: string,
@@ -53,34 +47,4 @@ export async function writeFileTool(
   await fs.mkdir(path.dirname(target), { recursive: true });
   await fs.writeFile(target, content, "utf8");
   return `Wrote ${target}`;
-}
-
-export async function runBashTool(command: string): Promise<string> {
-  const ok = await confirm(`Run shell command: ${command}`);
-  if (!ok) return "[skipped by user]";
-  return new Promise((resolve, reject) => {
-    const chunks: Buffer[] = [];
-    const errChunks: Buffer[] = [];
-    const child = spawn(command, {
-      shell: true,
-      cwd: process.cwd(),
-      env: process.env,
-    });
-    child.stdout?.on("data", (d: Buffer) => {
-      chunks.push(d);
-      process.stdout.write(d);
-    });
-    child.stderr?.on("data", (d: Buffer) => {
-      errChunks.push(d);
-      process.stderr.write(d);
-    });
-    child.on("error", reject);
-    child.on("close", (code) => {
-      const out = Buffer.concat(chunks).toString("utf8");
-      const err = Buffer.concat(errChunks).toString("utf8");
-      resolve(
-        `exit ${code}\n${out}${err ? `\nstderr:\n${err}` : ""}`.trim()
-      );
-    });
-  });
 }

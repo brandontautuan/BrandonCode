@@ -10,6 +10,7 @@ export type StreamChatOptions = {
   think?: boolean | "high" | "medium" | "low";
   maxTokens?: number;
   contextLimit?: number;
+  keepAlive?: string | number;
 };
 
 /**
@@ -32,6 +33,7 @@ export async function streamChatCompletion(
           ...(opts.think !== undefined ? { think: opts.think } : {}),
           ...(opts.maxTokens !== undefined ? { num_predict: opts.maxTokens } : {}),
           ...(opts.contextLimit !== undefined ? { num_ctx: opts.contextLimit } : {}),
+          ...(opts.keepAlive !== undefined ? { keep_alive: opts.keepAlive } : {}),
         }
       : {
           model,
@@ -40,6 +42,7 @@ export async function streamChatCompletion(
           ...(opts.think !== undefined ? { think: opts.think } : {}),
           ...(opts.maxTokens !== undefined ? { num_predict: opts.maxTokens } : {}),
           ...(opts.contextLimit !== undefined ? { num_ctx: opts.contextLimit } : {}),
+          ...(opts.keepAlive !== undefined ? { keep_alive: opts.keepAlive } : {}),
         }
   )) as AsyncIterable<ChatResponse>;
 
