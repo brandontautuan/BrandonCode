@@ -62,17 +62,6 @@ export function getOllamaThinkForRequest(
   return true;
 }
 
-/** Resolved Ollama host + model for the agent REPL. Primary: `~/.brandon-code/config.json`; fallback: `~/.brandoncode/config.json`. */
-export function getOllamaSettings(): { host: string; model: string } {
-  const store = getStore();
-  const legacy = readLegacyBrandoncodeFile();
-  const host =
-    store.get("ollamaHost") ?? legacy.ollamaHost ?? DEFAULT_HOST;
-  const model =
-    store.get("ollamaModel") ?? legacy.ollamaModel ?? DEFAULT_MODEL;
-  return { host, model };
-}
-
 /**
  * Planner + worker model names and limits. `workerModel` defaults to `ollamaModel`;
  * `plannerModel` defaults to `workerModel`.

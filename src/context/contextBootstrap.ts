@@ -3,6 +3,7 @@ import type { Message, Ollama } from "ollama";
 import fs from "node:fs";
 import path from "node:path";
 import type { Interface as ReadlineInterface } from "node:readline/promises";
+import { isThinkUnsupportedError } from "../agent/ollamaErrors.js";
 import { streamChatCompletion } from "../agent/streamChat.js";
 import { getOllamaThinkForRequest } from "../config/ollamaSettings.js";
 import { agentMdPath, getContextBaseDir } from "./paths.js";
@@ -307,8 +308,7 @@ async function chatWithThinkFallback(
       think !== undefined ? { think } : {}
     );
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (think === undefined || !/does not support thinking/i.test(msg)) {
+    if (think === undefined || !isThinkUnsupportedError(err)) {
       throw err;
     }
     return await streamChatCompletion(deps.ollama, deps.model, messages, {});

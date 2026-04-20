@@ -1,7 +1,5 @@
 import type { ToolCall } from "ollama";
 
-export const ALLOWED_TOOL_NAMES = new Set(["read_file", "write_file", "run_bash"]);
-
 export function parseInlineToolCallContent(
   content: string
 ): ToolCall[] | undefined {
@@ -32,21 +30,4 @@ export function parseInlineToolCallContent(
   }
 
   return undefined;
-}
-
-export function splitToolCalls(
-  calls: ToolCall[]
-): { runnable: ToolCall[]; unknownNames: string[] } {
-  const runnable: ToolCall[] = [];
-  const unknownNames: string[] = [];
-  for (const tc of calls) {
-    const name = tc.function?.name ?? "";
-    if (!name) continue;
-    if (ALLOWED_TOOL_NAMES.has(name)) {
-      runnable.push(tc);
-    } else {
-      unknownNames.push(name);
-    }
-  }
-  return { runnable, unknownNames };
 }

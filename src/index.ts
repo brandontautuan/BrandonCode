@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 import { Command } from "commander";
-import { DEFAULT_ACTIVE_MODEL_ID } from "./config/defaultModels.js";
 import { ensureValidActiveModel, getStore } from "./config/store.js";
 import {
   cmdModelAdd,
@@ -92,13 +91,6 @@ model
   .option("--force-default", "hide a built-in model from your list")
   .action((id: string, opts: { forceDefault?: boolean }) => {
     cmdModelRemove(id, Boolean(opts.forceDefault));
-  });
-
-program
-  .command("hello")
-  .description("Show banner + default model id (sanity check)")
-  .action(() => {
-    console.log(`Default built-in id: ${DEFAULT_ACTIVE_MODEL_ID}`);
   });
 
 const ctxRoot = program

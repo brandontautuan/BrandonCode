@@ -11,21 +11,8 @@ import {
 import { loadContext, ensureAgentContextFile } from "../context/contextLoader.js";
 import { runContextFinishFlow } from "../context/contextUpdater.js";
 import { nextGreeting } from "./greetings.js";
+import { parseApproval } from "./parseApproval.js";
 import { runPipeline } from "./pipeline.js";
-
-export {
-  parseInlineToolCallContent,
-  splitToolCalls,
-} from "./toolParse.js";
-
-export const MAX_TOOL_ROUNDS_PER_TURN = 8;
-
-function parseApproval(line: string): "y" | "n" | "e" {
-  const first = line.trim().toLowerCase()[0];
-  if (first === "e") return "e";
-  if (first === "y") return "y";
-  return "n";
-}
 
 /** Undici often reports ECONNREFUSED as the unhelpful string "fetch failed". */
 function formatOllamaError(err: unknown, host: string, model: string): string {
@@ -40,18 +27,6 @@ function formatOllamaError(err: unknown, host: string, model: string): string {
     `  • Start the Ollama app (or run \`ollama serve\`) so it listens on port 11434.`,
     `  • Pull the model if you have not: \`ollama pull ${model}\``,
   ].join("\n");
-}
-
-export function shouldEnableToolsForInput(input: string): boolean {
-  const s = input.trim().toLowerCase();
-  if (!s) return false;
-  return (
-    /\b(read|open|show|cat)\b/.test(s) ||
-    /\b(write|create|edit|update|save)\b/.test(s) ||
-    /\b(run|execute|bash|shell|terminal|command)\b/.test(s) ||
-    /\bfile\b/.test(s) ||
-    /[`$]/.test(s)
-  );
 }
 
 export type AgentLoopOptions = {

@@ -4,6 +4,7 @@ import {
   getOllamaThinkForRequest,
   getPipelineModels,
 } from "../config/ollamaSettings.js";
+import { isThinkUnsupportedError } from "./ollamaErrors.js";
 import { AGENT_TOOLS } from "./ollamaTools.js";
 import { streamChatCompletion } from "./streamChat.js";
 
@@ -28,11 +29,6 @@ export type ExecutePlanOptions = {
   enableThinking?: boolean;
   onStage?: (shortLabel: string, detail?: string) => void;
 };
-
-function isThinkUnsupportedError(err: unknown): boolean {
-  const msg = err instanceof Error ? err.message : String(err);
-  return /does not support thinking/i.test(msg);
-}
 
 /**
  * Run the worker model on the planner output. Streams to the terminal; returns proposals (including tool calls).

@@ -10,6 +10,7 @@ import { createActivitySink, type ActivityMode } from "./activitySink.js";
 import { buildPlan } from "./planner.js";
 import type { WorkerResult } from "./worker.js";
 import { executeplan } from "./worker.js";
+import { parseApproval } from "./parseApproval.js";
 import { writeFileTool } from "./tools.js";
 
 function parseToolArgs(tc: ToolCall): Record<string, unknown> {
@@ -47,13 +48,6 @@ async function applyWriteProposals(toolCalls: ToolCall[]): Promise<void> {
     if (!p) continue;
     await writeFileTool(p, content, { skipConfirm: true });
   }
-}
-
-function parseApproval(line: string): "y" | "n" | "e" {
-  const first = line.trim().toLowerCase()[0];
-  if (first === "e") return "e";
-  if (first === "y") return "y";
-  return "n";
 }
 
 async function defaultPromptApproval(): Promise<"y" | "n" | "e"> {

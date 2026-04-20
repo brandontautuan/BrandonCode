@@ -4,8 +4,6 @@ import path from "node:path";
 import { buildDefaultAgentContextMarkdown } from "./defaultAgentContextTemplate.js";
 import { agentMdPath } from "./paths.js";
 
-let lastLoaded = "";
-
 /**
  * Create `context/agent.md` with a generic template when missing (any project cwd).
  * Idempotent. Call when starting the agent REPL, not for every CLI subcommand.
@@ -37,19 +35,11 @@ export function loadContext(): string {
   try {
     const p = agentMdPath();
     if (!fs.existsSync(p)) {
-      lastLoaded = "";
       return "";
     }
     const text = fs.readFileSync(p, "utf8");
-    lastLoaded = text;
     return text;
   } catch {
-    lastLoaded = "";
     return "";
   }
-}
-
-/** Last successful `loadContext()` result (may be empty). */
-export function getLoadedContext(): string {
-  return lastLoaded;
 }

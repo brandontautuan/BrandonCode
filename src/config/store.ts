@@ -8,6 +8,16 @@ import {
 } from "./defaultModels.js";
 import type { ConfigSchema, ModelEntry } from "../types.js";
 
+const DEFAULT_CONFIG_SCHEMA: ConfigSchema = {
+  activeModel: DEFAULT_ACTIVE_MODEL_ID,
+  customModels: [],
+  hiddenBuiltinIds: [],
+  ollamaHost: "http://127.0.0.1:11434",
+  ollamaModel: "qwen2.5-coder:7b",
+  greetingRotationIndex: 0,
+  ollamaThink: true,
+};
+
 function getConfigDir(): string {
   return process.env.BRANDON_CODE_CONFIG_DIR
     ? path.resolve(process.env.BRANDON_CODE_CONFIG_DIR)
@@ -91,15 +101,7 @@ function writeFileConfig(data: ConfigSchema): void {
 }
 
 function createConf(): Conf<ConfigSchema> {
-  const defaults: ConfigSchema = {
-    activeModel: DEFAULT_ACTIVE_MODEL_ID,
-    customModels: [],
-    hiddenBuiltinIds: [],
-    ollamaHost: "http://127.0.0.1:11434",
-    ollamaModel: "qwen2.5-coder:7b",
-    greetingRotationIndex: 0,
-    ollamaThink: true,
-  };
+  const defaults: ConfigSchema = { ...DEFAULT_CONFIG_SCHEMA };
 
   try {
     return new Conf<ConfigSchema>({
@@ -110,15 +112,7 @@ function createConf(): Conf<ConfigSchema> {
     });
   } catch {
     const existing = readFileConfig();
-    const merged: ConfigSchema = existing ?? {
-      activeModel: DEFAULT_ACTIVE_MODEL_ID,
-      customModels: [],
-      hiddenBuiltinIds: [],
-      ollamaHost: "http://127.0.0.1:11434",
-      ollamaModel: "qwen2.5-coder:7b",
-      greetingRotationIndex: 0,
-      ollamaThink: true,
-    };
+    const merged: ConfigSchema = existing ?? { ...DEFAULT_CONFIG_SCHEMA };
     writeFileConfig(merged);
     return new Conf<ConfigSchema>({
       projectName: "brandon-code",
@@ -141,15 +135,8 @@ export function getStore(): Conf<ConfigSchema> {
     try {
       cached = createConf();
     } catch {
-      const fallback: ConfigSchema = readFileConfig() ?? {
-        activeModel: DEFAULT_ACTIVE_MODEL_ID,
-        customModels: [],
-        hiddenBuiltinIds: [],
-        ollamaHost: "http://127.0.0.1:11434",
-        ollamaModel: "qwen2.5-coder:7b",
-        greetingRotationIndex: 0,
-        ollamaThink: true,
-      };
+      const fallback: ConfigSchema =
+        readFileConfig() ?? { ...DEFAULT_CONFIG_SCHEMA };
       writeFileConfig(fallback);
       cached = createConf();
     }
@@ -238,8 +225,4 @@ export function removeModel(id: string, forceDefault: boolean): void {
   if (getActiveModelId() === id) {
     store.set("activeModel", DEFAULT_ACTIVE_MODEL_ID);
   }
-}
-
-export function getConfigPath(): string {
-  return getConfigFile();
 }

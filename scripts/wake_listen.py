@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import os
 import re
+import shlex
 import subprocess
 import sys
 import time
@@ -39,6 +40,11 @@ LAUNCH_SCRIPT = REPO_ROOT / "scripts" / "launch-brandoncode-terminal.sh"
 LOG_PREFIX = "[voice-wake]"
 DONE_WORDS = {"done", "send", "submit"}
 CANCEL_WORDS = {"cancel", "stop", "never mind", "nevermind"}
+USAGE_PATTERNS = [
+    re.compile(r"\bi want to check my usage\b"),
+    re.compile(r"\bcheck my usage\b"),
+    re.compile(r"\bshow (?:me )?my usage\b"),
+]
 
 
 def _env_int(name: str, default: int | None = None) -> int | None:
@@ -99,6 +105,36 @@ def _send_text_to_front_terminal(text: str, submit: bool) -> None:
     for p in parts:
         cmd.extend(["-e", p])
     subprocess.run(cmd, check=True)
+
+
+def _open_terminal_in_listener_cwd() -> None:
+    cwd = str(Path.cwd().resolve())
+    run_cmd = f"cd {shlex.quote(cwd)}"
+    subprocess.run(
+        [
+            "osascript",
+            "-e",
+            'tell application "Terminal" to activate',
+            "-e",
+            f'tell application "Terminal" to do script "{run_cmd}"',
+        ],
+        check=True,
+    )
+
+
+def _start_claude_in_new_terminal_session() -> None:
+    cwd = str(Path.cwd().resolve())
+    run_cmd = f"cd {shlex.quote(cwd)} && claude"
+    subprocess.run(
+        [
+            "osascript",
+            "-e",
+            'tell application "Terminal" to activate',
+            "-e",
+            f'tell application "Terminal" to do script "{run_cmd}"',
+        ],
+        check=True,
+    )
 
 
 def _capture_prompt_until_done(
@@ -169,6 +205,23 @@ WAKE_PATTERNS = [
 
 def normalize(text: str) -> str:
     return re.sub(r"\s+", " ", text.lower().strip())
+
+
+def is_usage_phrase(text: str) -> bool:
+    n = normalize(text)
+    return any(p.search(n) for p in USAGE_PATTERNS)
+
+
+def run_usage_command_shortcut() -> None:
+    print(f'{LOG_PREFIX} shortcut detected: "check usage"', flush=True)
+    _start_claude_in_new_terminal_session()
+    wait_sec = float(os.environ.get("VOICE_WAKE_USAGE_WAIT_SEC", "5"))
+    print(f"{LOG_PREFIX} waiting {wait_sec:.1f}s before sending /usage …", flush=True)
+    time.sleep(wait_sec)
+    # Slightly longer focus delay to avoid dropping the first character.
+    os.environ.setdefault("VOICE_WAKE_TYPE_DELAY", "0.8")
+    _send_text_to_front_terminal("/usage", submit=True)
+    print(f"{LOG_PREFIX} sent /usage in the same terminal session.", flush=True)
 
 
 def _extract_trailing_control(text: str) -> tuple[str, str | None]:
@@ -334,6 +387,20 @@ def main() -> None:
                 continue
 
             print(f'{LOG_PREFIX} transcript: "{text}"', flush=True)
+            if normalize(text) in CANCEL_WORDS:
+                print(f"{LOG_PREFIX} stop word heard — shutting down listener.", flush=True)
+                return
+            if is_usage_phrase(text):
+                try:
+                    run_usage_command_shortcut()
+                except subprocess.CalledProcessError as e:
+                    print(f"{LOG_PREFIX} failed to run usage shortcut: {e}", file=sys.stderr)
+                    print(
+                        f"{LOG_PREFIX} If prompted, allow Accessibility control for this terminal app.",
+                        file=sys.stderr,
+                    )
+                continue
+
             if is_wake_phrase(text):
                 print(f"{LOG_PREFIX} wake phrase matched — opening Terminal …", flush=True)
                 try:
@@ -355,9 +422,12 @@ def main() -> None:
                     except KeyboardInterrupt:
                         return
                     if prompt:
-                        print(f'{LOG_PREFIX} sending prompt to Terminal: "{prompt}"', flush=True)
                         try:
-                            _send_text_to_front_terminal(prompt, submit=True)
+                            if is_usage_phrase(prompt):
+                                run_usage_command_shortcut()
+                            else:
+                                print(f'{LOG_PREFIX} sending prompt to Terminal: "{prompt}"', flush=True)
+                                _send_text_to_front_terminal(prompt, submit=True)
                         except subprocess.CalledProcessError as e:
                             print(f"{LOG_PREFIX} failed to type into Terminal: {e}", file=sys.stderr)
                             print(

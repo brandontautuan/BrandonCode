@@ -5,7 +5,8 @@ import {
   getOllamaThinkForRequest,
   getPipelineModels,
 } from "../config/ollamaSettings.js";
-import { loadContext } from "../context/loader.js";
+import { isThinkUnsupportedError } from "./ollamaErrors.js";
+import { loadContext } from "../context/contextLoader.js";
 import { discoverRelevantFilePaths } from "./fileDiscovery.js";
 
 const MAX_SNIPPET = 16_000;
@@ -49,11 +50,6 @@ export type BuildPlanOptions = {
   /** Optional status lines (concise or verbose detail) for REPL observability. */
   onStage?: (shortLabel: string, detail?: string) => void;
 };
-
-function isThinkUnsupportedError(err: unknown): boolean {
-  const msg = err instanceof Error ? err.message : String(err);
-  return /does not support thinking/i.test(msg);
-}
 
 /**
  * Build a structured plan from user input: loads agent context, discovers up to 5 files, calls the planner model.
